@@ -31,9 +31,9 @@ parameters = getResolvedOptions(
     ],
 )
 
-raw_bucket_name = parameters["RAW_BUCKET_NAME"]
-alert_obj_key = parameters["ALERT_OBJ_KEY"]
-clean_bucket_name = parameters["CLEAN_BUCKET_NAME"]
+raw_bucket = parameters["RAW_BUCKET_NAME"]
+raw_key = parameters["ALERT_OBJ_KEY"]
+clean_bucket = parameters["CLEAN_BUCKET_NAME"]
 
 # NOTE: for now we'll take the alert object key and change out the file
 #       extension for the clean data (leaving all namespacing and such). this
@@ -44,14 +44,14 @@ s3_client = boto3.client("s3")
 
 # try to get the docx object from S3 and handle any error that would keep us
 # from continuing.
-response = s3_client.get_object(Bucket=raw_bucket_name, Key=alert_obj_key)
+response = s3_client.get_object(Bucket=raw_bucket, Key=raw_key)
 
 status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
 
 if status != 200:
     err = (
-        f"ERROR - Could not get object {alert_obj_key} from bucket "
-        f"{raw_bucket_name}. ETL Cannot continue."
+        f"ERROR - Could not get object {raw_key} from bucket "
+        f"{raw_bucket}. ETL Cannot continue."
     )
 
     logger.error(err)
@@ -61,26 +61,29 @@ if status != 200:
     #       as someone will need to be made aware)
     raise Exception(err)
 
-logger.info(f"Obtained object {alert_obj_key} from bucket {raw_bucket_name}.")
+logger.info(f"Obtained object {raw_key} from bucket {raw_bucket}.")
 
 raw = response.get("Body")
 
-# create your output using the received input
+# create the cleaned output as well as the name of the cleaned file
 cleaned = None
-clean_obj_key = None
-# clean_obj_key = alert_obj_key.replace(None, None)
 
-if cleaned is not None and clean_obj_key is not None:
+clean_key = None
+# We typically just want to replace the file extension with a new one
+# Below is a commented out example of this
+# clean_key = raw_key.replace(".xlsx", ".csv")
+
+if cleaned is not None and clean_key is not None:
     response = s3_client.put_object(
-        Bucket=clean_bucket_name, Key=clean_obj_key, Body=cleaned
+        Bucket=clean_bucket, Key=clean_key, Body=cleaned
     )
 
     status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
 
     if status != 200:
         err = (
-            f"ERROR - Could not write transformed data object {clean_obj_key} "
-            f"to bucket {clean_bucket_name}. ETL Cannot continue."
+            f"ERROR - Could not write transformed data object {clean_key} "
+            f"to bucket {clean_bucket}. ETL Cannot continue."
         )
 
         logger.error(err)
@@ -91,6 +94,6 @@ if cleaned is not None and clean_obj_key is not None:
         raise Exception(err)
 
     logger.info(
-        f"Transformed {raw_bucket_name}/{alert_obj_key} and wrote result "
-        f"to {clean_bucket_name}/{clean_obj_key}"
+        f"Transformed {raw_bucket}/{raw_key} and wrote result "
+        f"to {clean_bucket}/{clean_key}"
     )
