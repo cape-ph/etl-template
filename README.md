@@ -5,6 +5,9 @@ CAPE system. The script provides the boilerplate for retrieving the raw data
 file passed into the transform as well as the uploading of the cleaned data once
 it is created.
 
+> [!NOTE] The CAPE infrastructure and therefore this repository requires the use
+> of Python v3.10
+
 ## Usage
 
 1. Click the "Use this template" button at the top of the repository which will
